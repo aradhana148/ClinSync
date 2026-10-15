@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Sidebar } from '../../components/Sidebar'
 import { StatusBadge } from '../../components/StatusBadge'
 import { nurseQueue, recordVitals } from '../../api'
@@ -69,8 +69,20 @@ export default function NurseApp() {
   const [modal, setModal] = useState<any>(null)
   const [handoff, setHandoff] = useState('')
 
-  const reload = () => nurseQueue().then(r => setQueue(r.data)).finally(() => setLoading(false))
-  useEffect(() => { reload() }, [])
+  const [error, setError] = useState('')
+  const reload = useCallback(async () => {
+    try {
+      const { data } = await nurseQueue()
+      setQueue(data); setError('')
+    } catch { setError('Could not refresh the nursing queue. Please retry.') }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => {
+    const initial = setTimeout(reload, 0)
+    const timer = setInterval(reload, 5000)
+    window.addEventListener('focus', reload)
+    return () => { clearTimeout(initial); clearInterval(timer); window.removeEventListener('focus', reload) }
+  }, [reload])
 
   return (
     <div className="flex">
@@ -82,10 +94,11 @@ export default function NurseApp() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="stat-card"><div><div className="text-slate-600 text-xs">Awaiting Vitals</div><div className="text-3xl font-bold mt-1 text-amber-800">{queue.filter(v => v.status === 'Checked In').length}</div></div></div>
+          <div className="stat-card"><div><div className="text-slate-600 text-xs">Awaiting Vitals</div><div className="text-3xl font-bold mt-1 text-amber-800">{queue.length}</div></div></div>
           <div className="stat-card"><div><div className="text-slate-600 text-xs">Urgent Cases</div><div className="text-3xl font-bold mt-1 text-red-700">{queue.filter(v => v.vitals?.is_urgent).length}</div></div></div>
         </div>
 
+        {error && <div role="alert" className="alert-danger mb-4">{error}</div>}
         {handoff && <div className="alert-success mb-4">{handoff}</div>}
         {loading ? <div className="text-slate-600">Loading...</div> : (
           <div className="card">
@@ -106,7 +119,7 @@ export default function NurseApp() {
                       </td>
                     </tr>
                   ))}
-                  {queue.length === 0 && <tr><td colSpan={6} className="text-center text-slate-500 py-8">Queue is empty</td></tr>}
+                  {queue.length === 0 && <tr><td colSpan={6} className="text-center text-slate-500 py-8">No patients awaiting vitals. Reception must book an appointment and check the patient in first.</td></tr>}
                 </tbody>
               </table>
             </div>

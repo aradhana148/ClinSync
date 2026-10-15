@@ -1,8 +1,36 @@
 {
-    "rewrites": [
-      {
-        "source": "/(.*)",
-        "destination": "/index.html"
-      }
-    ]
-  }
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/receptionist/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/nurse/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/doctor/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/coordinator/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/technician/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pathologist/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

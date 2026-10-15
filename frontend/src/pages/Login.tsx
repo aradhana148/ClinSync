@@ -28,10 +28,18 @@ export default function Login() {
     setLoading(true)
     try {
       const { data } = await login(username, password)
+      if (!data?.access_token || !ROLE_ROUTES[data?.role]) {
+        setError('The login service returned an unexpected response. Please check the backend connection.')
+        return
+      }
       setUser({ user_id: data.user_id, full_name: data.full_name, role: data.role, token: data.access_token })
       navigate(ROLE_ROUTES[data.role] ?? '/')
     } catch (err: any) {
-      setError(err.response?.data?.detail ?? 'Login failed. Check your credentials.')
+      const status = err.response?.status
+      if (status === 401) setError('Incorrect username or password.')
+      else if (!status || status >= 500) setError('Cannot reach the login service. Please check that the backend is running and connected.')
+      else if (status === 404 || status === 405) setError('The login service is not connected at this address. Please check the deployment API settings.')
+      else setError(typeof err.response?.data?.detail === 'string' ? err.response.data.detail : 'Unable to sign in. Please try again.')
     } finally {
       setLoading(false)
     }

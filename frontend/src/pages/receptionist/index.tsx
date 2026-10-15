@@ -1,6 +1,6 @@
 import { FollowUps } from '../../components/FollowUps'
 import { useState, useEffect, useRef, useId } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate, Link } from 'react-router-dom'
 import { Sidebar } from '../../components/Sidebar'
 import { StatusBadge } from '../../components/StatusBadge'
 import { todayVisits, searchPatients, registerPatient, listDoctors, createVisit, checkinVisit, cancelAppointment, rescheduleAppointment } from '../../api'
@@ -24,8 +24,9 @@ function Dashboard() {
   }, [])
 
   const handleCheckin = async (id: number) => {
-    await checkinVisit(id)
-    todayVisits().then((r) => setVisits(r.data))
+    setError('')
+    try { await checkinVisit(id); await refresh() }
+    catch (e: any) { setError(e.response?.data?.detail || 'Check-in failed. Please retry.') }
   }
 
   return (
@@ -68,7 +69,7 @@ function Dashboard() {
                     <td>
                       {v.status === 'Scheduled' && (
                         <div className="flex gap-2 flex-wrap"><button className="btn btn-success btn-sm" onClick={() => handleCheckin(v.id)}>
-                          <CheckCircle size={13} /> Check In
+                          <CheckCircle size={13} /> Check In / Send to Nurse
                         </button><button className="btn-secondary btn-sm" onClick={() => { setEditing(v); setWhen(v.appointment_time?.slice(0,16) || "") }}>Reschedule</button><button className="btn-danger btn-sm" onClick={() => cancel(v.id)}>Cancel</button></div>
                       )}
                     </td>
@@ -156,6 +157,7 @@ function PatientList() {
 
 // ── Register Patient ───────────────────────────────────────────────────────────
 function RegisterPatient() {
+  const [registered, setRegistered] = useState<BookingPatient | null>(null)
   const [form, setForm] = useState({ full_name: '', dob: '', gender: '', phone: '', address: '', blood_group: '', allergies: '', abha_number: '' })
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
@@ -165,7 +167,8 @@ function RegisterPatient() {
     e.preventDefault(); setError(''); setSuccess('')
     try {
       const { data } = await registerPatient({ ...form, abha_number: form.abha_number.trim() || null })
-      setSuccess(`Patient registered! UHID: ${data.uhid}`)
+      setRegistered(data)
+      setSuccess(`Patient registered! UHID: ${data.uhid}. Book an appointment below, then check the patient in to send them to nursing.`)
       setForm({ full_name: '', dob: '', gender: '', phone: '', address: '', blood_group: '', allergies: '', abha_number: '' })
     } catch (err: any) {
       setError(err.response?.data?.detail ?? 'Registration failed')
@@ -175,6 +178,7 @@ function RegisterPatient() {
   return (
     <div>
       <h1 className="page-title mb-6">Register New Patient</h1>
+      {registered && <div className="card max-w-2xl mb-6"><h2 className="section-title mb-4">Book appointment for the registered patient</h2><AppointmentForm key={registered.id} patient={registered} /></div>}
       <div className="card max-w-2xl">
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
           <div className="form-group col-span-2"><label className="label">Full Name *</label><input className="input" required value={form.full_name} onChange={set('full_name')} /></div>
@@ -244,7 +248,7 @@ function AppointmentForm({ patient, onBooked, onCancel }: {
 
   return <form onSubmit={book} className="flex flex-col gap-4">
     <div className="alert-info">Patient: <strong>{patient.full_name}</strong> ({patient.uhid})</div>
-    {booked ? <div role="status" className="alert-success">Appointment booked. Visit ID: {booked.visit_id}</div> : <>
+    {booked ? <div role="status" className="alert-success">Appointment booked. Visit ID: {booked.visit_id}. <Link className="underline" to="/receptionist">Go to reception and click Check In / Send to Nurse</Link> when the patient arrives.</div> : <>
       <fieldset disabled={saving || loading} className="flex flex-col gap-4">
         <div className="form-group"><label className="label" htmlFor={`${fieldId}-doctor`}>Doctor *</label>
           <select id={`${fieldId}-doctor`} className="select" required value={form.doctor_id} onChange={e => setForm(f => ({ ...f, doctor_id: e.target.value }))}>

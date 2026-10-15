@@ -66,3 +66,11 @@ The smoke check uses a temporary database and verifies all role logins, the regi
 This is a local prototype: no production deployment, real analyser connection, real ABHA integration, billing or pharmacy. The simulated analyser is an in-process background task; keep the backend running while samples process. Barcode SVGs can be printed using the browser's Print command.
 
 Each browser tab keeps its own login session, so staff roles can be tested side by side. Doctor queues, open patient vitals, and reviewer queues refresh every five seconds. On restart, received results without a reviewer are routed automatically; held and released results are preserved.
+
+## Vercel frontend connection
+
+Deploy `frontend` as the Vercel project root. The FastAPI backend must run separately with persistent SQLite storage. The Vite development proxy only works locally.
+
+Set `VITE_API_URL` in the Vercel environment to the deployed backend HTTPS origin (without `/api`), then redeploy the frontend. Set `CORS_ORIGINS` on the backend to the exact frontend origin, with multiple origins separated by commas, and restart the backend. Create the staff accounts with `backend/seed.py` on the backend database if they do not exist.
+
+The Vercel rewrites serve the app for page routes only; API requests must reach the backend instead of `index.html`.
