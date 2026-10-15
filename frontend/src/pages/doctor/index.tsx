@@ -1,3 +1,4 @@
+import { DIAGNOSIS_PANELS } from '../../data/diagnosisPanels'
 import { LabWorkflow } from '../../components/LabWorkflow'
 import { FollowUps } from '../../components/FollowUps'
 import { useState, useEffect, useCallback } from 'react'
@@ -239,6 +240,10 @@ function LabOrdersTab({ visitId, patientId }: { visitId?: number; patientId: num
   const [params] = useSearchParams()
   const [selected, setSelected] = useState<number[]>([])
   const [priority, setPriority] = useState('Routine')
+  const [diagnosisCode, setDiagnosisCode] = useState('')
+  const suggestion = DIAGNOSIS_PANELS.find(d => d.code === diagnosisCode)
+  const suggestedTests = suggestion ? catalogue.filter(t => (suggestion.tests as readonly string[]).includes(t.code)) : []
+  const suggestionAvailable = !!suggestion && suggestedTests.length === suggestion.tests.length
   const [msg, setMsg] = useState(''); const [err, setErr] = useState('')
 
   const [refreshError, setRefreshError] = useState('')
@@ -261,7 +266,7 @@ function LabOrdersTab({ visitId, patientId }: { visitId?: number; patientId: num
     setErr('')
     try {
       await createLabOrder({ visit_id: visitId, test_ids: selected, priority })
-      setMsg('Lab order created!'); setSelected([])
+      setMsg('Lab order created!'); setSelected([]); setDiagnosisCode('')
       patientLabOrders(patientId).then(r => setOrders(r.data))
     } catch (err: any) { setErr(err.response?.data?.detail ?? 'Failed') }
   }
@@ -270,6 +275,25 @@ function LabOrdersTab({ visitId, patientId }: { visitId?: number; patientId: num
     <div className="grid grid-cols-2 gap-6">
       <div className="card">
         <h3 className="section-title mb-4">Order Tests</h3>{!visitId && <p className="alert-info mb-4">A new active visit is required to order tests. Previous orders are shown here.</p>}
+        <div className="mb-5 rounded-md border border-green-200 bg-green-50 p-4">
+          <label className="label" htmlFor="lab-diagnosis">ICD-10 diagnosis for test suggestions</label>
+          <select id="lab-diagnosis" className="select" value={diagnosisCode} disabled={!visitId} onChange={e => { setDiagnosisCode(e.target.value); setMsg('') }}>
+            <option value="">Select a diagnosis (optional)</option>
+            {DIAGNOSIS_PANELS.map(d => <option key={d.code} value={d.code}>{d.code} — {d.name}</option>)}
+          </select>
+          {suggestion && <div className="mt-3">
+            <p className="text-sm font-medium mb-2">Suggested tests</p>
+            <ul className="text-sm text-slate-700 mb-3">
+              {suggestedTests.map(t => <li key={t.id}>{t.name}{TEST_LOINC[t.code] && <span className="ml-2 text-xs text-green-800">LOINC {TEST_LOINC[t.code]}</span>}</li>)}
+            </ul>
+            {!suggestionAvailable && <p className="text-sm text-amber-800 mb-2">The suggested test is not available in the loaded catalogue.</p>}
+            <button type="button" className="btn-secondary btn-sm" disabled={!visitId || !suggestionAvailable || suggestedTests.every(t => selected.includes(t.id))}
+              onClick={() => { setSelected(previous => [...new Set([...previous, ...suggestedTests.map(t => t.id)])]); setErr(''); setMsg('Suggested tests added. Review the selection below before creating the order.') }}>
+              {suggestionAvailable && suggestedTests.every(t => selected.includes(t.id)) ? 'Suggested tests selected' : 'Add suggested tests'}
+            </button>
+          </div>}
+          <p className="text-xs text-slate-600 mt-3">Use these suggestions as a starting point. Add or remove tests below before confirming. Record the patient’s diagnosis in Consultation.</p>
+        </div>
         <div className="form-group mb-4">
           <label className="label">Priority</label>
           <select className="select" value={priority} onChange={e => setPriority(e.target.value)}>
