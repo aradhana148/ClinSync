@@ -318,7 +318,7 @@ function ReportsTab({ patientId }: { patientId: number }) {
                 <tr key={r.report_id} className={params.get("report") === r.report_id ? "bg-green-100/20" : ""}>
                   <td className="font-mono text-green-800">{r.report_id}</td>
                   <td>{r.test?.name}</td>
-                  <td className="max-w-xs whitespace-normal">{r.value}<div className="text-slate-600 text-xs mt-2">Reference: {r.ref_range}</div><button className="btn-secondary btn-sm mt-2" onClick={() => { const url = URL.createObjectURL(new Blob([`ClinSyn — LAB REPORT\n${r.report_id}\n${r.test?.name}\n${r.value}\nReference: ${r.ref_range}\nFlag: ${r.flag || "None"}\nApproved by: ${r.approved_by}\n${r.approved_at}`], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = `${r.report_id}.txt`; a.click(); URL.revokeObjectURL(url) }}>Download</button></td>
+                  <td className="max-w-xs whitespace-normal">{r.value}<div className="text-slate-600 text-xs mt-2">Reference: {r.ref_range}</div><button className="btn-secondary btn-sm mt-2" onClick={() => { const url = URL.createObjectURL(new Blob([`ClinSync — LAB REPORT\n${r.report_id}\n${r.test?.name}\n${r.value}\nReference: ${r.ref_range}\nFlag: ${r.flag || "None"}\nApproved by: ${r.approved_by}\n${r.approved_at}`], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = `${r.report_id}.txt`; a.click(); URL.revokeObjectURL(url) }}>Download</button></td>
                   <td><FlagBadge flag={r.flag} /></td>
                   <td>{r.approved_by}</td>
                   <td className="text-slate-600 text-xs">{new Date(r.approved_at).toLocaleString('en-IN')}</td>
@@ -388,7 +388,7 @@ function HistoryTab({ patientId, patient }: { patientId: number; patient: any })
         <p className="text-sm text-slate-600">ABHA ID: {patient?.abha_number || 'Not provided'}</p>
         <p className="text-sm text-slate-600 mt-1">No records retrieved from ABHA. ABHA record access is not connected.</p>
       </section>
-      <h4 className="font-medium mb-3">History recorded at ClinSyn</h4>
+      <h4 className="font-medium mb-3">History recorded at ClinSync</h4>
       <div className="flex flex-col gap-4">
         {visits.map((v: any) => (
           <div key={v.id} className="card-sm">

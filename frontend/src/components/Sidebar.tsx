@@ -55,7 +55,7 @@ export const Sidebar = () => {
   return (
     <>
       <aside className="sidebar">
-        <div className="sidebar-logo"><span className="hospital-mark"><Plus size={25} strokeWidth={3} /></span><div><strong>ClinSyn</strong><small>Clinical workspace</small></div></div>
+        <div className="sidebar-logo"><span className="hospital-mark"><Plus size={25} strokeWidth={3} /></span><div><strong>ClinSync</strong><small>Clinical workspace</small></div></div>
         <div className="nav-section-label">{ROLE_NAMES[user?.role ?? '']}</div>
         <nav className="flex flex-col gap-1 flex-1">
           {navItems.map(item => <NavLink key={item.to} to={item.to} end={item.to.split('/').length === 2} className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}>{item.icon}<span>{item.label}</span></NavLink>)}
@@ -64,7 +64,7 @@ export const Sidebar = () => {
         <button onClick={handleLogout} className="sign-out"><LogOut size={16} /> Sign out</button>
       </aside>
       <header className="workspace-header">
-        <div className="header-location">ClinSyn <span>/</span> <strong>{ROLE_NAMES[user?.role ?? '']}</strong></div>
+        <div className="header-location">ClinSync <span>/</span> <strong>{ROLE_NAMES[user?.role ?? '']}</strong></div>
         <div className="staff-identity"><span className="staff-avatar">{user?.full_name.replace(/^Dr\.\s*/, '').split(' ').map(n => n[0]).slice(0,2).join('')}</span><div><strong>{user?.full_name}</strong><small>{user?.role}</small></div></div>
       </header>
     </>

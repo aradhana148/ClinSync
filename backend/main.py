@@ -5,7 +5,7 @@ import models
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="ClinSyn", version="1.0.0")
+app = FastAPI(title="ClinSync", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,7 +28,7 @@ app.include_router(pathologist.router)
 
 @app.get("/")
 def root():
-    return {"message": "ClinSyn API", "docs": "/docs"}
+    return {"message": "ClinSync API", "docs": "/docs"}
 
 
 @app.on_event("startup")
