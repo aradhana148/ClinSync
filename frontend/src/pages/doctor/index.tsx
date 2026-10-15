@@ -1,3 +1,4 @@
+import { LabWorkflow } from '../../components/LabWorkflow'
 import { FollowUps } from '../../components/FollowUps'
 import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -240,10 +241,18 @@ function LabOrdersTab({ visitId, patientId }: { visitId?: number; patientId: num
   const [priority, setPriority] = useState('Routine')
   const [msg, setMsg] = useState(''); const [err, setErr] = useState('')
 
+  const [refreshError, setRefreshError] = useState('')
+  const reloadOrders = useCallback(async () => {
+    try { const r = await patientLabOrders(patientId); setOrders(r.data); setRefreshError('') }
+    catch { setRefreshError('Could not refresh LIS progress. Please retry.') }
+  }, [patientId])
   useEffect(() => {
-    getCatalogue().then(r => setCatalogue(r.data))
-    patientLabOrders(patientId).then(r => setOrders(r.data))
-  }, [visitId, patientId])
+    getCatalogue().then(r => setCatalogue(r.data)).catch(() => setErr('Could not load test catalogue'))
+    const initial = setTimeout(reloadOrders, 0)
+    const timer = setInterval(reloadOrders, 5000)
+    window.addEventListener('focus', reloadOrders)
+    return () => { clearTimeout(initial); clearInterval(timer); window.removeEventListener('focus', reloadOrders) }
+  }, [reloadOrders])
 
   const toggle = (id: number) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
 
@@ -283,7 +292,9 @@ function LabOrdersTab({ visitId, patientId }: { visitId?: number; patientId: num
         <button className="btn-primary w-full justify-center" disabled={!visitId} onClick={order}><Plus size={15} /> Create Order</button>
       </div>
       <div className="card">
-        <h3 className="section-title mb-4">Existing Orders</h3>
+        <div className="flex justify-between items-center mb-4"><h3 className="section-title">Existing Orders</h3><button className="btn-secondary btn-sm" onClick={reloadOrders}>Refresh</button></div>
+        <p className="text-xs text-slate-600 mb-4">Progress refreshes every 5 seconds. Cancellation is available before analysis starts. Rejected samples remain open for recollection until explicitly cancelled.</p>
+        {refreshError && <div role="alert" className="alert-danger mb-3">{refreshError}</div>}
         <div className="flex flex-col gap-3">
           {orders.map((o: any) => (
             <div key={o.id} className={`card-sm ${params.get("order") === String(o.id) ? "ring-2 ring-green-700" : ""}`}>
@@ -292,6 +303,7 @@ function LabOrdersTab({ visitId, patientId }: { visitId?: number; patientId: num
                 <div className="flex gap-2"><StatusBadge status={o.priority} /><StatusBadge status={o.status} /></div>
               </div>
               <div className="text-slate-700 text-sm">{o.tests?.map((t: any) => t.name).join(', ')}</div>
+              <LabWorkflow order={o} onChanged={reloadOrders} />
             </div>
           ))}
           {!orders.length && <div className="text-slate-600 text-sm">No orders yet</div>}

@@ -88,7 +88,7 @@ function OrdersPage() {
                     </select>
                     <button
                       className="btn btn-primary btn-sm"
-                      disabled={busy === o.id || !assigning[o.id] || Number(assigning[o.id]) === o.technician_id}
+                      disabled={o.status === 'Cancelled' || o.status === 'Completed' || busy === o.id || !assigning[o.id] || Number(assigning[o.id]) === o.technician_id}
                       onClick={() => assign(o.id, Number(assigning[o.id]))}
                     >{busy === o.id ? 'Assigning…' : o.technician_id && (!assigning[o.id] || Number(assigning[o.id]) === o.technician_id) ? 'Assigned' : 'Assign'}</button>
                   </div>

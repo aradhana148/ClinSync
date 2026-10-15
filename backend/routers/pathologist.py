@@ -124,6 +124,8 @@ def submit_review(
     if not result:
         raise HTTPException(404, "Result not found")
 
+    if result.sample.order.status == OrderStatus.cancelled:
+        raise HTTPException(409, "This lab order has been cancelled")
     if result.status not in (ResultStatus.pending_review, ResultStatus.held):
         raise HTTPException(400, "Only pending or held results can be reviewed")
     if data.decision in ("held", "rerun") and not (data.hold_reason or "").strip():

@@ -46,26 +46,52 @@ with tempfile.TemporaryDirectory() as temp:
     tids=[t['id'] for t in tests if t['code'] in ('GLU','CBC')]
     call('doctor1','POST','doctor/lab-orders',{'visit_id':vid,'test_ids':[]},400)
     order=call('doctor1','POST','doctor/lab-orders',{'visit_id':vid,'test_ids':tids})
+    def progress(oid=order['id']):
+        return next(o for o in call('doctor1','GET',f'doctor/patients/{p["id"]}/lab-orders') if o['id']==oid)['workflow']
+    assert progress()['stage']=='Ordered'
+    cancel_order=call('doctor1','POST','doctor/lab-orders',{'visit_id':vid,'test_ids':tids})
+    cancel_url=f'doctor/lab-orders/{cancel_order["id"]}/cancel'
+    call('doctor2','POST',cancel_url,{'reason':'Not needed'},403)
+    call('doctor1','POST',cancel_url,{'reason':' '},400)
+    call('doctor1','POST',cancel_url,{'reason':'No longer needed'})
+    assert progress(cancel_order['id'])['stage']=='Cancelled'
+    assert progress(cancel_order['id'])['cancellation_reason']=='No longer needed'
+    call('doctor1','POST',cancel_url,{'reason':'Again'},409)
     tech=call('coord1','GET','coordinator/technicians')[0]
+    recollect=call('doctor1','POST','doctor/lab-orders',{'visit_id':vid,'test_ids':tids})
+    call('coord1','POST','coordinator/assign-technician',{'order_id':recollect['id'],'technician_id':tech['id']})
+    call('tech1','POST','technician/collect-sample',{'order_id':recollect['id']})
+    rs=next(o for o in call('tech1','GET','technician/my-orders') if o['order_id']==recollect['id'])['sample']['id']
+    call('tech1','POST','technician/reject-sample',{'sample_id':rs,'rejection_reason':'Insufficient sample'})
+    assert progress(recollect['id'])['stage']!='Cancelled'
+    call('doctor1','POST',f'doctor/lab-orders/{recollect["id"]}/cancel',{'reason':'Patient will not return for recollection'})
+    call('tech1','POST','technician/collect-sample',{'order_id':recollect['id']},409)
+    call('tech1','POST',f'technician/receive-sample/{rs}',status=409)
     reviewers=call('coord1','GET','coordinator/pathologists')
     assert all('hashed_password' not in x for x in reviewers)
     reviewer=next(x for x in reviewers if x['username']=='patho1')
     call('coord1','POST','coordinator/assign-technician',{'order_id':order['id'],'technician_id':tech['id']})
+    assert progress()['stage']=='Received'
+    call('coord1','POST','coordinator/assign-technician',{'order_id':cancel_order['id'],'technician_id':tech['id']},409)
     collect={'order_id':order['id']}
     call('tech2','POST','technician/collect-sample',collect,403)
     call('tech1','POST','technician/collect-sample',collect)
     def sample(): return next(o for o in call('tech1','GET','technician/my-orders') if o['order_id']==order['id'])['sample']['id']
+    assert progress()['stage']=='Sample collected'
     old=sample()
     label = client.get(f'/api/technician/samples/{old}/label', headers=tokens['tech1'])
     assert label.status_code == 200 and '<svg' in label.text
     call('tech2','GET',f'technician/samples/{old}/label',status=403)
     call('tech1','POST',f'technician/receive-sample/{old}')
     call('tech1','POST','technician/reject-sample',{'sample_id':old,'rejection_reason':'Demo rejection'})
+    assert progress()['exceptions'] and progress()['can_cancel']
     call('tech1','POST','technician/collect-sample',collect)
     sid=sample(); assert sid!=old
     call('tech1','POST',f'technician/receive-sample/{sid}')
     with patch('time.sleep'):
         call('tech1','POST',f'technician/accept-sample/{sid}')
+    assert progress()['stage']=='Awaiting verification'
+    call('doctor1','POST',f'doctor/lab-orders/{order["id"]}/cancel',{'reason':'Too late'},409)
     results=call('tech1','GET',f'technician/results/{sid}')
     assert len(results)==2
     queues = call('patho1','GET','pathologist/review-queue') + call('patho2','GET','pathologist/review-queue')
@@ -97,6 +123,7 @@ with tempfile.TemporaryDirectory() as temp:
             call('patho1','POST',f'pathologist/review/{a["assignment_id"]}',{'decision':'approved'},400)
         call('patho1','POST',f'pathologist/review/{a["assignment_id"]}',{'decision':'approved','notification_recorded':True})
         call('patho1','POST',f'pathologist/review/{a["assignment_id"]}',{'decision':'approved','notification_recorded':True},400)
+    assert progress()['stage']=='Completed'
     call('doctor1','POST',f'doctor/visits/{vid}/complete')
     assert any(x['id']==p['id'] for x in call('doctor1','GET','doctor/patients'))
     assert any(x['id']==order['id'] for x in call('doctor1','GET',f'doctor/patients/{p["id"]}/lab-orders'))

@@ -26,6 +26,9 @@ def _gen_sample_id(db: Session) -> str:
 
 
 def _assigned(db, order_id, user):
+    order = db.get(LabOrder, order_id)
+    if order and order.status == OrderStatus.cancelled:
+        raise HTTPException(409, "This lab order has been cancelled")
     if not db.query(TechnicianAssignment).filter_by(order_id=order_id, technician_id=user.id).first():
         raise HTTPException(403, "Order is not assigned to you")
 
@@ -102,6 +105,8 @@ def _run_analyser(sample_db_id: int, test_codes: list, run_number: int = 1):
         if not sample or sample.status != SampleStatus.processing:
             raise ValueError("Unknown sample or sample is not processing")
 
+        if sample.order.status == OrderStatus.cancelled:
+            return
         if db.query(LabResult).filter_by(sample_id=sample.id, run_number=run_number).first():
             raise ValueError("Duplicate analyser run")
         allowed = {ot.test.code for ot in sample.order.order_tests}
@@ -207,7 +212,7 @@ def collect_sample(
         raise HTTPException(404, "Order not found")
 
     _assigned(db, order.id, current_user)
-    # Verify patient with 2nd identifier
+    # Confirm the patient associated with the assigned order
     patient = order.visit.patient if order.visit else None
     if not patient:
         raise HTTPException(404, "Patient not found")

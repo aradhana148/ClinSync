@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from lab_workflow import workflow
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from database import get_db
@@ -332,10 +334,31 @@ def patient_orders(patient_id: int, db: Session = Depends(get_db), user: User = 
     get_patient(patient_id, db, user)
     orders = db.query(LabOrder).join(OpdVisit).filter(OpdVisit.patient_id == patient_id).order_by(LabOrder.id.desc()).all()
     return [{"id": o.id, "order_id": o.order_id, "priority": o.priority.value, "status": o.status.value,
-             "tests": [{"name": t.test.name} for t in o.order_tests]} for o in orders]
+             "tests": [{"name": t.test.name} for t in o.order_tests],
+             "workflow": workflow(db, o, user.id)} for o in orders]
 
 
 @router.get("/patients")
 def my_patients(db: Session = Depends(get_db), user: User = Depends(_require)):
     patients = db.query(Patient).join(OpdVisit).filter(OpdVisit.doctor_id == user.id).distinct().all()
     return [{"id": p.id, "name": p.full_name, "uhid": p.uhid} for p in patients]
+
+
+class CancelLabOrder(BaseModel):
+    reason: str = Field(min_length=1, max_length=1000)
+
+@router.post("/lab-orders/{order_id}/cancel")
+def cancel_lab_order(order_id: int, data: CancelLabOrder, db: Session = Depends(get_db), user: User = Depends(_require)):
+    order = db.query(LabOrder).filter_by(id=order_id, ordered_by=user.id).first()
+    if not order:
+        raise HTTPException(403, "Order not found or not assigned to this doctor")
+    if not data.reason.strip():
+        raise HTTPException(400, "A cancellation reason is required")
+    # Claim the order before checking activity, preventing competing SQLite writes.
+    claimed = db.query(LabOrder).filter(LabOrder.id == order_id, LabOrder.status.in_([OrderStatus.ordered, OrderStatus.assigned])).update({"status": OrderStatus.cancelled}, synchronize_session=False)
+    if not claimed or not workflow(db, order, user.id)['can_cancel']:
+        db.rollback()
+        raise HTTPException(409, "Only orders awaiting collection or processing can be cancelled; analysis or released results must be preserved")
+    db.add(AuditLog(user_id=user.id, action='cancel_lab_order', entity_type='lab_order', entity_id=str(order_id), details=data.reason.strip()))
+    db.commit()
+    return {"message": "Lab order cancelled"}

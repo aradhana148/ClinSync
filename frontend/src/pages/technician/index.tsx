@@ -151,17 +151,17 @@ export default function TechnicianApp() {
                   </div>
 
                   <div className="flex flex-col gap-2 items-end">
-                    {(!o.sample || o.sample.status === 'Rejected') && (
+                    {o.status !== 'Cancelled' && (!o.sample || o.sample.status === 'Rejected') && (
                       <button className="btn-primary btn-sm" onClick={() => setCollectModal(o)}>
                         <TestTube size={13} /> Collect Sample
                       </button>
                     )}
-                    {o.sample?.status === 'Collected' && (
+                    {o.status !== 'Cancelled' && o.sample?.status === 'Collected' && (
                       <button className="btn-secondary btn-sm" onClick={() => withMsg(o.order_id, () => receiveSample(o.sample.id), 'Sample received')}>
                         Mark Received
                       </button>
                     )}
-                    {o.sample?.status === 'Received' && (
+                    {o.status !== 'Cancelled' && o.sample?.status === 'Received' && (
                       <div className="flex gap-2">
                         <button className="btn-success btn-sm" onClick={() => withMsg(o.order_id, () => acceptSample(o.sample.id), 'Analyser started — results in ~15s')}>
                           Accept & Process
@@ -169,10 +169,10 @@ export default function TechnicianApp() {
                         <button className="btn-danger btn-sm" onClick={() => setRejectModal(o.sample)}>Reject</button>
                       </div>
                     )}
-                    {o.sample?.status === 'Processing' && (
+                    {o.status !== 'Cancelled' && o.sample?.status === 'Processing' && (
                       <div className="badge-orange">Analyser Processing...</div>
                     )}
-                    {o.sample?.status === 'Processed' && (
+                    {o.status !== 'Cancelled' && o.sample?.status === 'Processed' && (
                       <button className="btn-secondary btn-sm" onClick={() => setExpandedSample(expandedSample === o.sample.id ? null : o.sample.id)}>
                         {expandedSample === o.sample.id ? 'Hide Results' : 'View Results'}
                       </button>

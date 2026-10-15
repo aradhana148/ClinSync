@@ -63,6 +63,8 @@ def assign_technician(
     order = db.query(LabOrder).filter_by(id=data.order_id).first()
     if not order:
         raise HTTPException(404, "Order not found")
+    if order.status in (OrderStatus.cancelled, OrderStatus.completed):
+        raise HTTPException(409, "Closed orders cannot be assigned")
     tech = db.query(User).filter_by(id=data.technician_id, role=UserRole.technician).first()
     if not tech:
         raise HTTPException(404, "Technician not found")
