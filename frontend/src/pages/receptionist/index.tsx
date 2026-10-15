@@ -1,3 +1,4 @@
+import { FollowUps } from '../../components/FollowUps'
 import { useState, useEffect, useRef, useId } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { Sidebar } from '../../components/Sidebar'
@@ -331,6 +332,7 @@ export default function ReceptionistApp() {
       <main className="main-content">
         <Routes>
           <Route index element={<Dashboard />} />
+          <Route path="follow-ups" element={<FollowUps />} />
           <Route path="patients" element={<PatientList />} />
           <Route path="register" element={<RegisterPatient />} />
           <Route path="appointments" element={<Appointments />} />

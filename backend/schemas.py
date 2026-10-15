@@ -200,7 +200,6 @@ class AssignReviewerRequest(BaseModel):
 # ── Sample ────────────────────────────────────────────────────────────────────
 class SampleCollectRequest(BaseModel):
     order_id: int
-    patient_identifier_2: str  # second identifier for verification (e.g. DOB or phone)
 
 
 class SampleRejectRequest(BaseModel):

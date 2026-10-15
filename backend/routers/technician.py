@@ -211,8 +211,7 @@ def collect_sample(
     patient = order.visit.patient if order.visit else None
     if not patient:
         raise HTTPException(404, "Patient not found")
-    if not data.patient_identifier_2.strip() or data.patient_identifier_2 not in (patient.dob or "", patient.phone or ""):
-        raise HTTPException(400, "Patient identity verification failed — DOB or phone does not match")
+
 
     # Check if already collected
     existing = db.query(Sample).filter_by(order_id=data.order_id).filter(

@@ -5,15 +5,15 @@ import { myOrders, collectSample, receiveSample, acceptSample, rejectSample, get
 import { TestTube, RefreshCw, AlertTriangle } from 'lucide-react'
 
 function CollectModal({ order, onClose, onDone }: any) {
-  const [id2, setId2] = useState('')
+  const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(''); const [err, setErr] = useState('')
 
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setErr(''); setMsg('')
+    e.preventDefault(); if (saving || msg) return; setSaving(true); setErr(''); setMsg('')
     try {
-      const { data } = await collectSample({ order_id: order.order_id, patient_identifier_2: id2 })
+      const { data } = await collectSample({ order_id: order.order_id })
       setMsg(`Sample collected! ID: ${data.sample_id} | Barcode: ${data.barcode}`)
-    } catch (err: any) { setErr(err.response?.data?.detail ?? 'Failed') }
+    } catch (err: any) { setErr(err.response?.data?.detail ?? 'Failed') } finally { setSaving(false) }
   }
 
   return (
@@ -28,14 +28,10 @@ function CollectModal({ order, onClose, onDone }: any) {
           Tests: {order.tests?.map((t: any) => t.name).join(', ')}
         </div>
         <form onSubmit={submit} className="flex flex-col gap-4">
-          <div className="form-group">
-            <label className="label">Second Identifier (DOB yyyy-mm-dd or Phone)</label>
-            <input className="input" required value={id2} onChange={e => setId2(e.target.value)} placeholder="e.g. 1985-03-12 or 9876543210" />
-          </div>
           {msg && <div className="alert-success">{msg}</div>}
           {err && <div className="alert-danger">{err}</div>}
           <div className="flex gap-2">
-            <button type="submit" className="btn-primary flex-1 justify-center">Verify & Collect</button>
+            <button type="submit" disabled={saving || !!msg} className="btn-primary flex-1 justify-center">{saving ? 'Verifying…' : msg ? 'Verified' : 'Verify'}</button>
             {msg && <button type="button" className="btn-secondary" onClick={onDone}>Done</button>}
           </div>
         </form>

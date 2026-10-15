@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar } from '../../components/Sidebar'
 import { StatusBadge } from '../../components/StatusBadge'
 import {
-  coordDashboard, coordOrders, coordTechnicians, coordPathologists,
-  assignTechnician, assignReviewer, pendingReviews
+  coordDashboard, coordOrders, coordTechnicians,
+  assignTechnician
 } from '../../api'
 import { RefreshCw } from 'lucide-react'
 
@@ -38,6 +38,8 @@ function OrdersPage() {
   const [technicians, setTechnicians] = useState<any[]>([])
   const [assigning, setAssigning] = useState<Record<number, string>>({})
   const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState<number | null>(null)
+  const [error, setError] = useState('')
 
   const reload = () => {
     coordOrders().then(r => setOrders(r.data))
@@ -46,8 +48,13 @@ function OrdersPage() {
   useEffect(() => { reload() }, [])
 
   const assign = async (orderId: number, techId: number) => {
-    await assignTechnician({ order_id: orderId, technician_id: techId })
-    setMsg(`Assigned successfully`); reload()
+    setBusy(orderId); setError(''); setMsg('')
+    try {
+      await assignTechnician({ order_id: orderId, technician_id: techId })
+      setOrders(items => items.map(o => o.id === orderId ? {...o, technician_id: techId, technician: technicians.find(t => t.id === techId)?.full_name} : o))
+      setMsg('Assigned successfully'); reload()
+    } catch (e: any) { setError(e.response?.data?.detail || 'Assignment failed') }
+    finally { setBusy(null) }
   }
 
   return (
@@ -56,6 +63,7 @@ function OrdersPage() {
         <h1 className="page-title">Incoming Orders</h1>
         <button className="btn-secondary" onClick={reload}><RefreshCw size={15} /> Refresh</button>
       </div>
+      {error && <div className="alert-danger mb-4">{error}</div>}
       {msg && <div className="alert-success mb-4">{msg}</div>}
       <div className="table-wrapper">
         <table className="table">
@@ -72,7 +80,7 @@ function OrdersPage() {
                   <div className="flex gap-2">
                     <select
                       className="input text-xs py-1 px-2 w-36"
-                      value={assigning[o.id] ?? ''}
+                      value={assigning[o.id] ?? o.technician_id ?? ''}
                       onChange={e => setAssigning(a => ({ ...a, [o.id]: e.target.value }))}
                     >
                       <option value="">— Select —</option>
@@ -80,9 +88,9 @@ function OrdersPage() {
                     </select>
                     <button
                       className="btn btn-primary btn-sm"
-                      disabled={!assigning[o.id]}
+                      disabled={busy === o.id || !assigning[o.id] || Number(assigning[o.id]) === o.technician_id}
                       onClick={() => assign(o.id, Number(assigning[o.id]))}
-                    >Assign</button>
+                    >{busy === o.id ? 'Assigning…' : o.technician_id && (!assigning[o.id] || Number(assigning[o.id]) === o.technician_id) ? 'Assigned' : 'Assign'}</button>
                   </div>
                 </td>
               </tr>
@@ -114,59 +122,6 @@ function WorkloadPage() {
   )
 }
 
-function ReviewsPage() {
-  const [results, setResults] = useState<any[]>([])
-  const [pathologists, setPathologists] = useState<any[]>([])
-  const [assigning, setAssigning] = useState<Record<number, string>>({})
-  const [msg, setMsg] = useState('')
-
-  const reload = () => {
-    pendingReviews().then(r => setResults(r.data))
-    coordPathologists().then(r => setPathologists(r.data))
-  }
-  useEffect(() => { reload() }, [])
-
-  const assign = async (resultId: number, pathoId: number) => {
-    await assignReviewer({ result_id: resultId, pathologist_id: pathoId })
-    setMsg('Reviewer assigned'); reload()
-  }
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="page-title">Review Assignments</h1>
-        <button className="btn-secondary" onClick={reload}><RefreshCw size={15} /> Refresh</button>
-      </div>
-      {msg && <div className="alert-success mb-4">{msg}</div>}
-      <div className="table-wrapper">
-        <table className="table">
-          <thead><tr><th>Result ID</th><th>Test</th><th>Flag</th><th>Status</th><th>Assign To</th></tr></thead>
-          <tbody>
-            {results.map((r: any) => (
-              <tr key={r.id}>
-                <td className="font-mono">{r.id}</td>
-                <td>{r.test}</td>
-                <td className="text-amber-800">{r.flag ?? '—'}</td>
-                <td><StatusBadge status={r.status} /></td>
-                <td>
-                  <div className="flex gap-2">
-                    <select className="input text-xs py-1 px-2 w-36" value={assigning[r.id] ?? ''} onChange={e => setAssigning(a => ({ ...a, [r.id]: e.target.value }))}>
-                      <option value="">— Select —</option>
-                      {pathologists.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-                    </select>
-                    <button className="btn btn-primary btn-sm" disabled={!assigning[r.id]} onClick={() => assign(r.id, Number(assigning[r.id]))}>Assign</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!results.length && <tr><td colSpan={5} className="text-center text-slate-500 py-8">No pending reviews</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
 export default function CoordinatorApp() {
   return (
     <div className="flex">
@@ -176,7 +131,7 @@ export default function CoordinatorApp() {
           <Route index element={<CoordDashboard />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="workload" element={<WorkloadPage />} />
-          <Route path="reviews" element={<ReviewsPage />} />
+          <Route path="reviews" element={<Navigate to="/coordinator" replace />} />
         </Routes>
       </main>
     </div>

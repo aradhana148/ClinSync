@@ -40,10 +40,10 @@ export default function Login() {
   return (
     <div className="login-page">
       <section className="login-information">
-        <div className="login-brand"><span className="hospital-mark"><Plus size={29} strokeWidth={3} /></span><div><strong>City Hospital</strong><small>Outpatient & laboratory services</small></div></div>
+        <div className="login-brand"><span className="hospital-mark"><Plus size={29} strokeWidth={3} /></span><div><strong>ClinSyn</strong><small>Outpatient & laboratory services</small></div></div>
         <div className="login-intro"><span className="eyebrow">STAFF PORTAL</span><h1>Care starts with<br />a connected team.</h1><p>Patient visits, clinical records and laboratory reports, together in one place.</p></div>
         <div className="service-directory"><h2>Hospital workspace</h2><div><span>01</span><p><strong>Outpatient department</strong><small>Registration, appointments and nursing assessment</small></p></div><div><span>02</span><p><strong>Consultations & patient records</strong><small>Clinical notes, prescriptions and visit history</small></p></div><div><span>03</span><p><strong>Laboratory services</strong><small>Sample processing, review and report release</small></p></div></div>
-        <div className="login-information-footer">CITY HOSPITAL <span>OPD / LIS</span></div>
+        <div className="login-information-footer">ClinSyn <span>OPD / LIS</span></div>
       </section>
       <section className="login-form-panel">
         <div className="login-form-wrap">
@@ -57,7 +57,7 @@ export default function Login() {
           </form>
           <p className="login-access-note">Access is limited to your assigned staff role.<br />Sign out when you have finished using this workstation.</p>
         </div>
-        <footer className="login-footer">City Hospital · Hospital information system</footer>
+        <footer className="login-footer">ClinSyn · Hospital information system</footer>
       </section>
     </div>
   )

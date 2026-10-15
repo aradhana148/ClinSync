@@ -5,7 +5,7 @@ import models
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Hospital OPD + LIS Demo", version="1.0.0")
+app = FastAPI(title="ClinSyn", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,7 +28,7 @@ app.include_router(pathologist.router)
 
 @app.get("/")
 def root():
-    return {"message": "Hospital OPD + LIS Demo API", "docs": "/docs"}
+    return {"message": "ClinSyn API", "docs": "/docs"}
 
 
 @app.on_event("startup")
@@ -38,3 +38,6 @@ def recover_review_handoffs():
     with SessionLocal() as db:
         assign_received_results(db)
         db.commit()
+
+from routers import followups
+app.include_router(followups.router)

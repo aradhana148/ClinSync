@@ -1,3 +1,4 @@
+import { FollowUps } from '../../components/FollowUps'
 import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { TEST_LOINC } from '../../data/loinc'
@@ -95,7 +96,7 @@ function DoctorDashboard() {
 }
 
 // ── Patient Page ───────────────────────────────────────────────────────────────
-const TABS = ['Overview', 'Consultation', 'Lab Orders', 'Reports', 'Prescription', 'Patient History']
+const TABS = ['Overview', 'Consultation', 'Lab Orders', 'Reports', 'Prescription', 'Follow-up', 'Patient History']
 
 function PatientPage() {
   const { patientId } = useParams()
@@ -144,13 +145,14 @@ function PatientPage() {
         ))}
       </div>
 
+      {tab === 'Follow-up' && <FollowUps patientId={pid} />}
       {tab === 'Overview'      && <OverviewTab visit={visit} patient={patient} />}
       {tab === 'Consultation'  && visit && <ConsultationTab visitId={visit.id} patientId={pid} />}
       {tab === 'Lab Orders' && <LabOrdersTab visitId={visit?.id} patientId={pid} />}
       {tab === 'Reports'       && <ReportsTab patientId={pid} />}
       {tab === 'Prescription'  && visit && <PrescriptionTab visitId={visit.id} />}
       {tab === 'Patient History'       && <HistoryTab patientId={pid} patient={patient} />}
-      {!visit && tab !== 'Overview' && tab !== 'Reports' && tab !== 'Patient History' && tab !== 'Lab Orders' && (
+      {!visit && tab !== 'Follow-up' && tab !== 'Overview' && tab !== 'Reports' && tab !== 'Patient History' && tab !== 'Lab Orders' && (
         <div className="alert-warn">No active visit found for this patient.</div>
       )}
     </div>
@@ -316,7 +318,7 @@ function ReportsTab({ patientId }: { patientId: number }) {
                 <tr key={r.report_id} className={params.get("report") === r.report_id ? "bg-green-100/20" : ""}>
                   <td className="font-mono text-green-800">{r.report_id}</td>
                   <td>{r.test?.name}</td>
-                  <td className="max-w-xs whitespace-normal">{r.value}<div className="text-slate-600 text-xs mt-2">Reference: {r.ref_range}</div><button className="btn-secondary btn-sm mt-2" onClick={() => { const url = URL.createObjectURL(new Blob([`CITY HOSPITAL — LAB REPORT\n${r.report_id}\n${r.test?.name}\n${r.value}\nReference: ${r.ref_range}\nFlag: ${r.flag || "None"}\nApproved by: ${r.approved_by}\n${r.approved_at}`], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = `${r.report_id}.txt`; a.click(); URL.revokeObjectURL(url) }}>Download</button></td>
+                  <td className="max-w-xs whitespace-normal">{r.value}<div className="text-slate-600 text-xs mt-2">Reference: {r.ref_range}</div><button className="btn-secondary btn-sm mt-2" onClick={() => { const url = URL.createObjectURL(new Blob([`ClinSyn — LAB REPORT\n${r.report_id}\n${r.test?.name}\n${r.value}\nReference: ${r.ref_range}\nFlag: ${r.flag || "None"}\nApproved by: ${r.approved_by}\n${r.approved_at}`], { type: "text/plain" })); const a = document.createElement("a"); a.href = url; a.download = `${r.report_id}.txt`; a.click(); URL.revokeObjectURL(url) }}>Download</button></td>
                   <td><FlagBadge flag={r.flag} /></td>
                   <td>{r.approved_by}</td>
                   <td className="text-slate-600 text-xs">{new Date(r.approved_at).toLocaleString('en-IN')}</td>
@@ -386,7 +388,7 @@ function HistoryTab({ patientId, patient }: { patientId: number; patient: any })
         <p className="text-sm text-slate-600">ABHA ID: {patient?.abha_number || 'Not provided'}</p>
         <p className="text-sm text-slate-600 mt-1">No records retrieved from ABHA. ABHA record access is not connected.</p>
       </section>
-      <h4 className="font-medium mb-3">History recorded at City Hospital</h4>
+      <h4 className="font-medium mb-3">History recorded at ClinSyn</h4>
       <div className="flex flex-col gap-4">
         {visits.map((v: any) => (
           <div key={v.id} className="card-sm">

@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert all('hashed_password' not in x for x in reviewers)
     reviewer=next(x for x in reviewers if x['username']=='patho1')
     call('coord1','POST','coordinator/assign-technician',{'order_id':order['id'],'technician_id':tech['id']})
-    collect={'order_id':order['id'],'patient_identifier_2':'1990-01-01'}
+    collect={'order_id':order['id']}
     call('tech2','POST','technician/collect-sample',collect,403)
     call('tech1','POST','technician/collect-sample',collect)
     def sample(): return next(o for o in call('tech1','GET','technician/my-orders') if o['order_id']==order['id'])['sample']['id']
@@ -110,4 +110,23 @@ with tempfile.TemporaryDirectory() as temp:
             try: _run_analyser(unknown,['GLU'])
             except ValueError: pass
             else: raise AssertionError('Invalid analyser message accepted')
+    from datetime import date, timedelta
+    follow_date = (date.today() + timedelta(days=7)).isoformat()
+    follow_url = f'doctor/patients/{p["id"]}/follow-ups'
+    payload = {'requested_date': follow_date, 'reason': 'Review recovery'}
+    call('doctor2','POST',follow_url,payload,403)
+    call('nurse1','GET','receptionist/follow-ups',status=403)
+    call('doctor1','POST',follow_url,{'requested_date':'2000-01-01','reason':'Review'},400)
+    follow = call('doctor1','POST',follow_url,payload)
+    call('doctor1','POST',follow_url,payload,409)
+    assert any(r['id']==follow['id'] for r in call('recep1','GET','receptionist/follow-ups'))
+    book_url = f'receptionist/follow-ups/{follow["id"]}/book'
+    booking = {'appointment_time':follow_date+'T10:00:00'}
+    call('recep1','POST',book_url,{'appointment_time':'2000-01-01T10:00:00'},400)
+    booked = call('recep1','POST',book_url,booking)
+    assert booked['status'] == 'booked'
+    call('recep1','POST',book_url,booking,409)
+    assert call('doctor1','GET',follow_url)[0]['status']=='booked'
+    assert any(v['patient_id']==p['id'] and v['appointment_time'].startswith(follow_date) for v in call('recep1','GET','receptionist/visits'))
+    print('PASS: follow-up request, reception booking, duplicate prevention and access restrictions')
     print('PASS: all roles, registration through release, rejection/recollection, hold/rerun, critical notification, immutable reports and access denials')

@@ -303,3 +303,19 @@ class AuditLog(Base):
     entity_id: Mapped[Optional[str]] = mapped_column(String(50))
     details: Mapped[Optional[str]] = mapped_column(Text)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class FollowUpRequest(Base):
+    __tablename__ = "follow_up_requests"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id"))
+    doctor_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    requested_date: Mapped[str] = mapped_column(String(10))
+    reason: Mapped[str] = mapped_column(Text)
+    department: Mapped[Optional[str]] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    booked_visit_id: Mapped[Optional[int]] = mapped_column(ForeignKey("opd_visits.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    patient: Mapped["Patient"] = relationship("Patient")
+    doctor: Mapped["User"] = relationship("User")
+    booked_visit: Mapped[Optional["OpdVisit"]] = relationship("OpdVisit")
